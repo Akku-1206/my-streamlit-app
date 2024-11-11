@@ -24,7 +24,8 @@ warnings.filterwarnings('ignore')
 
 
 # Load dataset 
-gym = pd.read_csv(r"C:\Users\ASUS\OneDrive\Desktop\gym_members_exercise_tracking.csv")
+gym = pd.read_csv("gym_members_exercise_tracking.csv")
+
 
 # Display data types and first few rows
 print("Data Types:\n", gym.dtypes)
