@@ -15,7 +15,6 @@ if uploaded_file:
     # Read the uploaded file into a DataFrame
     gym_data = pd.read_csv(uploaded_file)
     
-    # Display data preview
     st.write("Data Preview:")
     st.dataframe(gym_data.head())  # Show the first few rows of the dataset
 
@@ -37,18 +36,24 @@ if uploaded_file:
 
     # Correlation Heatmap
     st.write("Correlation Heatmap:")
-    if not gym_data.empty:
-        corr_matrix = gym_data.corr()
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
-        st.pyplot()
+    if uploaded_file:
+        # Filter only numeric columns before calculating correlation
+        numeric_data = gym_data.select_dtypes(include=['number'])
+        
+        if not numeric_data.empty:
+            corr_matrix = numeric_data.corr()
+            plt.figure(figsize=(10, 8))
+            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
+            st.pyplot()
+        else:
+            st.write("The dataset contains no numeric columns to compute correlation.")
 
     # 4. **Model Predictions: Calories Burned**
     st.subheader('Calories Burned Prediction')
 
     # Check if the dataset contains relevant columns (age, weight, workout type, etc.)
     if 'Calories_Burned' in gym_data.columns:
-        # Assuming column names match the expected features in the model
+        # Prepare data for training the model
         X = gym_data[['Age', 'Weight', 'Workout_Type', 'Session_Duration']]
         y = gym_data['Calories_Burned']
 
@@ -69,7 +74,6 @@ if uploaded_file:
         # Make prediction
         prediction = model.predict(user_data)
 
-        # Show prediction result
         st.write(f"Predicted Calories Burned: {prediction[0]:.2f} kcal")
 
         # 5. **Explanation (optional)**
@@ -77,6 +81,4 @@ if uploaded_file:
     else:
         st.write("The dataset does not contain 'Calories_Burned' column for predictions.")
 
-else:
-    st.write("Please upload a CSV file to get started.")
-
+# Run the Streamlit app
