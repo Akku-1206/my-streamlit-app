@@ -1,14 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
 import warnings
 
 # Ignore warnings
@@ -81,43 +78,20 @@ user_input = {
 }
 user_input_df = pd.DataFrame(user_input, index=[0])
 
-# Align user_input_df with training data columns
-X_train, X_test, y_train, y_test = train_test_split(gym.drop('Calories_Burned', axis=1), gym['Calories_Burned'], test_size=0.2, random_state=42)
-user_input_df = user_input_df.reindex(columns=X_train.columns, fill_value=0)
-
 # Model Training
+X_train, X_test, y_train, y_test = train_test_split(gym.drop('Calories_Burned', axis=1), gym['Calories_Burned'], test_size=0.2, random_state=42)
+
+# Select model for prediction
+selected_model_name = st.selectbox("Select Model for Prediction", ["Linear Regression", "Decision Tree", "Random Forest"])
 models = {
     'Linear Regression': LinearRegression(),
     'Decision Tree': DecisionTreeRegressor(random_state=42),
     'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42)
 }
-
-# Train and evaluate models
-results = []
-for name, model in models.items():
-    model.fit(X_train, y_train)
-    y_pred = model.predict(X_test)
-    mse = mean_squared_error(y_test, y_pred)
-    rmse = np.sqrt(mse)
-    mae = mean_absolute_error(y_test, y_pred)
-    r2 = r2_score(y_test, y_pred)
-    results.append({
-        'Model': name,
-        'MSE': mse,
-        'RMSE': rmse,
-        'MAE': mae,
-        'R2': r2
-    })
-
-results_df = pd.DataFrame(results)
-st.subheader("Model Performance Comparison")
-st.write(results_df)
-
-# Select model for prediction
-selected_model_name = st.selectbox("Select Model for Prediction", ["Linear Regression", "Decision Tree", "Random Forest"])
 selected_model = models[selected_model_name]
 
-# Make prediction for user input
+# Train the selected model and make a prediction for user input
+selected_model.fit(X_train, y_train)
 user_prediction = selected_model.predict(user_input_df)[0]
 st.subheader(f"Predicted Calories Burned: {user_prediction:.2f} kcal")
 
@@ -127,32 +101,3 @@ st.write(f"Age: {age}")
 st.write(f"Weight: {weight} kg")
 st.write(f"Session Duration: {session_duration} hours")
 st.write(f"Workout Type: {workout_type}")
-
-# Data Visualizations (EDA)
-st.subheader("Exploratory Data Analysis")
-
-# Distribution plots
-fig, axes = plt.subplots(2, 2, figsize=(15, 12))
-sns.histplot(gym['Calories_Burned'], kde=True, ax=axes[0, 0]).set_title('Calories Burned')
-sns.histplot(gym['BMI'], kde=True, ax=axes[0, 1]).set_title('BMI')
-sns.histplot(gym['Fat_Percentage'], kde=True, ax=axes[1, 0]).set_title('Fat Percentage')
-sns.histplot(gym['Water_Intake (liters)'], kde=True, ax=axes[1, 1]).set_title('Water Intake')
-st.pyplot(fig)
-
-# Correlation matrix
-st.write("### Correlation Matrix")
-fig, ax = plt.subplots(figsize=(12, 8))
-sns.heatmap(gym.corr(), annot=True, cmap='coolwarm', center=0)
-st.pyplot(fig)
-
-# Workout Type vs. Calories Burned
-st.write("### Calories Burned by Workout Type")
-workout_columns = ['Workout_Type_HIIT', 'Workout_Type_Strength', 'Workout_Type_Yoga']
-gym_melted = gym.melt(id_vars=['Calories_Burned'], value_vars=workout_columns, 
-                      var_name='Workout_Type', value_name='Performed')
-gym_melted = gym_melted[gym_melted['Performed'] == 1].drop(columns='Performed')
-gym_melted['Workout_Type'] = gym_melted['Workout_Type'].str.replace('Workout_Type_', '')
-
-fig, ax = plt.subplots(figsize=(10, 5))
-sns.boxplot(x='Workout_Type', y='Calories_Burned', data=gym_melted)
-st.pyplot(fig)
