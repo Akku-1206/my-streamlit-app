@@ -1,92 +1,92 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
 
-# Streamlit App Title
-st.title("Analyzing Gym Member Exercise Data for Health & Fitness Insights")
+# Set up Streamlit page
+st.title('Gym Member Exercise Data Insights')
 
-# Cache functions for loading data and model to optimize memory usage
-@st.cache_data
-def load_data(file):
-    data = pd.read_csv(file)
-    return data.sample(frac=0.1, random_state=1)  # Use 10% of the data for optimization
+# 1. **File Upload Section**
+st.subheader('Upload Your Data File')
+uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
 
-@st.cache_resource
-def train_model(data):
-    X = data[['age', 'weight', 'workout_type', 'session_duration']]
-    y = data['Calories_Burned']
-    model = LinearRegression()
-    model.fit(X, y)
-    return model
+if uploaded_file:
+    # Read the uploaded file into a DataFrame
+    gym_data = pd.read_csv(uploaded_file)
+    
+    st.write("Data Preview:")
+    st.dataframe(gym_data.head())  # Show the first few rows of the dataset
 
-# Sidebar for file upload
-st.sidebar.title("Data Upload")
-uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
+    # Print the column names to check for any discrepancies
+    st.write("Column Names in Dataset:")
+    st.write(gym_data.columns)
 
-# Tabs for App Sections
-tab1, tab2, tab3, tab4 = st.tabs(["Data Upload", "Input Features & Prediction", "Visualization", "Correlation Heatmap"])
+    # Display summary statistics
+    st.write("Data Summary:")
+    st.write(gym_data.describe())
 
-# Tab 1: Data Upload
-with tab1:
-    st.header("Data Upload")
+    # 2. **Input Features for Predictions**
+    st.subheader('Input Features for Prediction')
+
+    # Example input fields for prediction
+    age = st.slider('Age', min_value=18, max_value=80, value=25)
+    weight = st.number_input('Weight (kg)', min_value=40, max_value=150, value=70)
+    workout_type = st.selectbox('Workout Type', options=['Cardio', 'Strength', 'Flexibility'])
+    session_duration = st.slider('Workout Duration (hours)', min_value=0.25, max_value=3.0, value=1.0)  # in hours
+
+    # 3. **Data Visualizations**
+    st.subheader('Data Visualizations')
+
+    # Correlation Heatmap
+    st.write("Correlation Heatmap:")
     if uploaded_file:
-        gym_data = load_data(uploaded_file)
-        st.write("Data Sample:")
-        st.write(gym_data.head())
+        # Filter only numeric columns before calculating correlation
+        numeric_data = gym_data.select_dtypes(include=['number'])
+        
+        if not numeric_data.empty:
+            corr_matrix = numeric_data.corr()
+            plt.figure(figsize=(10, 8))
+            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
+            st.pyplot()
+        else:
+            st.write("The dataset contains no numeric columns to compute correlation.")
+
+    # 4. **Model Predictions: Calories Burned**
+    st.subheader('Calories Burned Prediction')
+
+    # Check if the dataset contains relevant columns (age, weight, workout type, etc.)
+    required_columns = ['Age', 'Weight (kg)', 'Workout_Type', 'Session_Duration (hours)', 'Calories_Burned']
+    
+    if all(col in gym_data.columns for col in required_columns):
+        # Prepare data for training the model
+        X = gym_data[['Age', 'Weight (kg)', 'Workout_Type', 'Session_Duration (hours)']]
+        y = gym_data['Calories_Burned']
+
+        # Encode categorical variables if necessary (like workout type)
+        X = pd.get_dummies(X, drop_first=True)
+
+        # Train a simple Linear Regression model
+        model = LinearRegression()
+        model.fit(X, y)
+
+        # User input data for prediction
+        user_data = pd.DataFrame([[age, weight, workout_type, session_duration]], 
+                                 columns=['Age', 'Weight (kg)', 'Workout_Type', 'Session_Duration (hours)'])
+
+        # Encode the user's input the same way
+        user_data = pd.get_dummies(user_data, drop_first=True)
+
+        # Make prediction
+        prediction = model.predict(user_data)
+
+        # Display the predicted calories burned in a human-readable format
+        st.write(f"Predicted Calories Burned: {prediction[0]:.2f} kcal")
+
+        # 5. **Explanation (optional)**
+        st.write("Explanation: The model uses factors such as age, weight, workout type, and session duration to predict calories burned.")
     else:
-        st.write("Please upload a CSV file.")
+        st.write("The dataset does not contain the necessary columns for prediction.")
+        st.write(f"Missing columns: {set(required_columns) - set(gym_data.columns)}")
 
-# Tab 2: Input Features & Prediction
-with tab2:
-    st.header("Input Features & Prediction")
-    if uploaded_file:
-        # Get input features from the user
-        age = st.number_input("Age", min_value=0, max_value=100, step=1)
-        weight = st.number_input("Weight (kg)", min_value=0.0, max_value=200.0, step=0.1)
-        workout_type = st.selectbox("Workout Type", gym_data['workout_type'].unique())
-        session_duration = st.number_input("Session Duration (minutes)", min_value=0, max_value=300, step=1)
-
-        # Prepare input data for prediction
-        user_data = pd.DataFrame({
-            'age': [age],
-            'weight': [weight],
-            'workout_type': [workout_type],
-            'session_duration': [session_duration]
-        })
-
-        # Train and make predictions
-        model = train_model(gym_data)
-        prediction = model.predict(user_data[['age', 'weight', 'session_duration']])
-        st.write(f"Predicted Calories Burned: {prediction[0]:.2f}")
-    else:
-        st.write("Please upload data in the 'Data Upload' tab.")
-
-# Tab 3: Visualization
-with tab3:
-    st.header("Visualization")
-    if uploaded_file:
-        st.subheader("Data Distribution by Features")
-        selected_columns = st.multiselect("Select columns for distribution plot", gym_data.columns.tolist())
-        if selected_columns:
-            for col in selected_columns:
-                fig, ax = plt.subplots()
-                sns.histplot(gym_data[col], ax=ax)
-                st.pyplot(fig)
-    else:
-        st.write("Please upload data in the 'Data Upload' tab.")
-
-# Tab 4: Correlation Heatmap
-with tab4:
-    st.header("Correlation Heatmap")
-    if uploaded_file:
-        selected_cols = st.multiselect("Select columns for heatmap", gym_data.columns.tolist(), default=gym_data.columns.tolist()[:5])
-        if selected_cols:
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.heatmap(gym_data[selected_cols].corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
-            st.pyplot(fig)
-    else:
-        st.write("Please upload data in the 'Data Upload' tab.")
-
+# Run the Streamlit app
