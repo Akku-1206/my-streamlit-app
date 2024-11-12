@@ -35,23 +35,22 @@ if uploaded_file:
     gym_data[numeric_cols] = gym_data[numeric_cols].apply(pd.to_numeric, errors='coerce')
     gym_data.dropna(subset=numeric_cols, inplace=True)
 
-    # Display summary statistics
-    st.write("Data Summary:")
-    st.write(gym_data.describe())
-
     # 2. **Data Visualizations**
     st.subheader('Data Visualizations')
 
-    # Correlation Heatmap
-    st.write("Correlation Heatmap:")
+    # Histograms for numeric columns
+    st.write("Histogram for Numeric Columns:")
     numeric_data = gym_data[numeric_cols]
     if not numeric_data.empty:
-        corr_matrix = numeric_data.corr()
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
-        st.pyplot()
+        for column in numeric_data.columns:
+            plt.figure(figsize=(8, 6))
+            sns.histplot(numeric_data[column], kde=True, bins=20, color='skyblue', edgecolor='black')
+            plt.title(f'Histogram of {column}')
+            plt.xlabel(column)
+            plt.ylabel('Frequency')
+            st.pyplot()
     else:
-        st.write("The dataset contains no numeric columns to compute correlation.")
+        st.write("The dataset contains no numeric columns to plot histograms.")
 
     # 3. **Model Predictions: Calories Burned**
     st.subheader('Calories Burned Prediction')
