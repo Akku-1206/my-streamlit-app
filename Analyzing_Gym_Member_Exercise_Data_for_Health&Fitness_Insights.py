@@ -4,169 +4,120 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.linear_model import LinearRegression
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
-import warnings
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
 
-# Ignore warnings
-warnings.filterwarnings('ignore')
+# App Title
+st.title('Gym Members Exercise Tracking Analysis')
 
-# Function to preprocess the uploaded dataset
-def preprocess_data(gym):
-    continuous_features = [
-        'Weight (kg)', 'Height (m)', 'Max_BPM', 'Avg_BPM', 'Resting_BPM', 'Session_Duration (hours)', 
-        'Calories_Burned', 'Fat_Percentage', 'Water_Intake (liters)', 'Workout_Frequency (days/week)', 
-        'Experience_Level', 'BMI'
-    ]
+# Create tabs
+tabs = ['Dataset Upload', 'Input Features', 'Model Prediction', 'EDA & Visualizations']
+selected_tab = st.selectbox('Navigation', tabs)
 
-    # Convert to numeric and fill missing values
-    for col in continuous_features:
-        gym[col] = pd.to_numeric(gym[col], errors='coerce')
-    gym[continuous_features] = gym[continuous_features].fillna(gym[continuous_features].mean())
-
-    # Label encoding for Experience_Level
-    le = LabelEncoder()
-    gym['Experience_Level'] = le.fit_transform(gym['Experience_Level'])
-
-    # One-hot encoding for categorical features
-    gym = pd.get_dummies(gym, columns=['Gender', 'Workout_Type'], drop_first=True)
-
-    # Standardization of continuous features
-    scaler = StandardScaler()
-    gym[continuous_features] = scaler.fit_transform(gym[continuous_features])
-    
-    return gym
-
-# Streamlit User Interface
-st.title("Gym Members Exercise Tracking Analysis")
-st.sidebar.title("Navigation")
-tabs = st.sidebar.radio("Select a tab", ["Dataset Upload", "Input Features", "Model Prediction", "EDA & Visualizations"])
-
-# Function to upload data and store it in session state
-def upload_data():
+# Dataset Upload Tab
+if selected_tab == 'Dataset Upload':
+    st.header('Upload Your Own Dataset')
     uploaded_file = st.file_uploader("Upload a CSV file for analysis", type=["csv"])
 
     if uploaded_file is not None:
-        gym = pd.read_csv(uploaded_file)
-        gym = preprocess_data(gym)
-        st.session_state.gym = gym  # Store the dataset in session state
-        st.write(gym.head())
-        return gym
-    return None
+        gym_data = pd.read_csv(uploaded_file)
+        st.write(gym_data.head())  # Display the first few rows of the uploaded dataset
+        st.session_state.gym_data = gym_data  # Save dataset in session state for later use
 
-# Placeholder for the dataset
-if 'gym' not in st.session_state:
-    st.session_state.gym = None
+# Input Features Tab
+elif selected_tab == 'Input Features':
+    st.header('Enter Your Details for Prediction')
 
-if tabs == "Dataset Upload":
-    st.subheader("Upload Your Own Dataset")
-    gym = upload_data()
+    # Input fields for prediction
+    age_input = st.slider("Age", min_value=18, max_value=100, value=25)
+    weight_input = st.slider("Weight (kg)", min_value=18, max_value=200, value=70)
+    session_duration = st.slider("Session Duration (hours)", min_value=0.5, max_value=3.0, value=1.0)
 
-elif tabs == "Input Features":
-    st.subheader("Enter Your Details for Prediction")
-    age = st.slider('Age', 18, 100, 25)
-    weight = st.number_input('Weight (kg)', min_value=30, max_value=200, value=70)
-    session_duration = st.slider('Session Duration (hours)', 0.5, 3.0, 1.0)
-    workout_type = st.selectbox('Workout Type', ['HIIT', 'Strength', 'Yoga'])
+    # Workout type selection (one-hot encoding)
+    workout_types = ['HIIT', 'Strength', 'Yoga']
+    workout_input = st.selectbox("Workout Type", workout_types)
+    encoded_workout = [1 if workout == workout_input else 0 for workout in workout_types]
 
-    # User input for prediction
-    user_input = {
-        'Age': age,
-        'Weight (kg)': weight,
+    # Show entered details
+    entered_details = {
+        'Age': age_input,
+        'Weight (kg)': weight_input,
         'Session_Duration (hours)': session_duration,
-        'Workout_Type_HIIT': 1 if workout_type == 'HIIT' else 0,
-        'Workout_Type_Strength': 1 if workout_type == 'Strength' else 0,
-        'Workout_Type_Yoga': 1 if workout_type == 'Yoga' else 0,
+        'Workout_Type_HIIT': encoded_workout[0],
+        'Workout_Type_Strength': encoded_workout[1],
+        'Workout_Type_Yoga': encoded_workout[2]
     }
-    user_input_df = pd.DataFrame(user_input, index=[0])
 
-    st.write(f"Entered Details: {user_input}")
+    st.write('Entered Details:', entered_details)
 
-elif tabs == "Model Prediction":
-    st.subheader("Model Performance Comparison and Prediction")
+    # Save the input details for later use in model prediction
+    st.session_state.user_input = entered_details
 
-    # Ensure that dataset is loaded
-    if st.session_state.gym is None:
-        st.error("Dataset is not loaded. Please upload a dataset first.")
+# Model Prediction Tab
+elif selected_tab == 'Model Prediction':
+    st.header('Model Performance Comparison and Prediction')
+
+    if 'gym_data' not in st.session_state or 'user_input' not in st.session_state:
+        st.warning("Please upload a dataset and enter your details for prediction.")
     else:
-        # Preparing data for model prediction
-        gym = st.session_state.gym
-        X = gym.drop('Calories_Burned', axis=1)
-        y = gym['Calories_Burned']
+        gym_data = st.session_state.gym_data
+        user_input = st.session_state.user_input
 
-        # Split data
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        # Train models
-        models = {
-            'Linear Regression': LinearRegression(),
-            'Decision Tree': DecisionTreeRegressor(random_state=42),
-            'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42)
-        }
-
-        results = []
-        for name, model in models.items():
-            model.fit(X_train, y_train)
-            y_pred = model.predict(X_test)
-            mse = mean_squared_error(y_test, y_pred)
-            rmse = np.sqrt(mse)
-            mae = mean_absolute_error(y_test, y_pred)
-            r2 = r2_score(y_test, y_pred)
-            results.append({
-                'Model': name,
-                'MSE': mse,
-                'RMSE': rmse,
-                'MAE': mae,
-                'R2': r2
-            })
-
-        results_df = pd.DataFrame(results)
-        st.write(results_df)
-
-        # Model selection dropdown
-        selected_model_name = st.selectbox("Select Model for Prediction", ["Linear Regression", "Decision Tree", "Random Forest"])
-        selected_model = models[selected_model_name]
-
-        # Make prediction based on user input
-        if user_input_df.empty:
-            st.error("Please enter user input first.")
+        # Check if the dataset contains the target variable
+        if 'Calories_Burned' not in gym_data.columns:
+            st.warning("The dataset does not contain the 'Calories_Burned' column.")
         else:
-            user_prediction = selected_model.predict(user_input_df)[0]
-            st.subheader(f"Predicted Calories Burned: {user_prediction:.2f} kcal")
+            # Preprocess the data
+            X = gym_data.drop('Calories_Burned', axis=1)
+            y = gym_data['Calories_Burned']
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            # Explanation of factors contributing to the prediction
-            st.write("### Factors Contributing to the Prediction")
-            st.write(f"Age: {age}")
-            st.write(f"Weight: {weight} kg")
-            st.write(f"Session Duration: {session_duration} hours")
-            st.write(f"Workout Type: {workout_type}")
+            # Standardize the features
+            scaler = StandardScaler()
+            X_train_scaled = scaler.fit_transform(X_train)
+            X_test_scaled = scaler.transform(X_test)
 
-elif tabs == "EDA & Visualizations":
-    st.subheader("Exploratory Data Analysis and Visualizations")
+            # Train the model
+            model = LinearRegression()
+            model.fit(X_train_scaled, y_train)
 
-    if st.session_state.gym is None:
-        st.error("Dataset is not loaded. Please upload a dataset first.")
+            # Predict on the test set
+            y_pred = model.predict(X_test_scaled)
+
+            # Evaluate the model
+            mse = mean_squared_error(y_test, y_pred)
+            st.write(f"Mean Squared Error: {mse}")
+
+            # Make prediction for the user input
+            user_input_df = pd.DataFrame([user_input])
+            user_input_scaled = scaler.transform(user_input_df)
+            user_prediction = model.predict(user_input_scaled)
+
+            st.write(f"Predicted Calories Burned: {user_prediction[0]}")
+
+# EDA & Visualizations Tab
+elif selected_tab == 'EDA & Visualizations':
+    st.header('Exploratory Data Analysis and Visualizations')
+
+    if 'gym_data' not in st.session_state:
+        st.warning("Please upload a dataset to view visualizations.")
     else:
-        gym = st.session_state.gym
-        # Distribution plot for Calories_Burned
-        st.write("### Distribution of Calories Burned")
-        plt.figure(figsize=(10, 6))
-        sns.histplot(gym['Calories_Burned'], kde=True, color='skyblue')
+        gym_data = st.session_state.gym_data
+
+        # Display distribution of calories burned
+        st.subheader('Distribution of Calories Burned')
+        sns.histplot(gym_data['Calories_Burned'], kde=True)
         st.pyplot()
 
         # Correlation heatmap
-        st.write("### Correlation Heatmap")
-        plt.figure(figsize=(10, 6))
-        correlation = gym.corr()
-        sns.heatmap(correlation, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
+        st.subheader('Correlation Heatmap')
+        correlation_matrix = gym_data.corr()
+        sns.heatmap(correlation_matrix, annot=True, cmap="coolwarm")
         st.pyplot()
 
         # Pairplot of selected features
-        st.write("### Pairplot of Selected Features")
-        selected_features = ['Weight (kg)', 'Age', 'Session_Duration (hours)', 'Calories_Burned']
-        sns.pairplot(gym[selected_features], hue="Workout_Type_Strength")
+        selected_features = ['Age', 'Weight (kg)', 'Session_Duration (hours)', 'Calories_Burned']
+        st.subheader('Pairplot of Selected Features')
+        sns.pairplot(gym_data[selected_features], hue="Workout_Type_HIIT")
         st.pyplot()
-
