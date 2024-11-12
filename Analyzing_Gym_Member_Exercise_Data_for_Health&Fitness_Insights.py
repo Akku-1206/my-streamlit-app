@@ -1,97 +1,68 @@
-import streamlit as st
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
 
-# Streamlit App Title
-st.title("Analyzing Gym Member Exercise Data for Health & Fitness Insights")
+# Sample DataFrame (replace this with your actual dataset)
+# df = pd.read_csv('your_dataset.csv')
 
-# Cache functions for loading data and model to optimize memory usage
-@st.cache_data
-def load_data(file):
-    data = pd.read_csv(file)
-    print(data.columns)  # Print the column names for debugging
-    return data.sample(frac=0.1, random_state=1)  # Use 10% of the data for optimization
+# Step 1: Feature Engineering (BMI calculation if not present)
+if 'BMI' not in df.columns:
+    df['BMI'] = df['Weight (kg)'] / (df['Height (m)'] ** 2)
 
-@st.cache_resource
-def train_model(data):
-    # Ensure the column names are correct based on your dataset
-    # For example, if the dataset has 'Age', 'Weight', 'Session_duration_(hours)', 'Calories_Burned'
-    X = data[['Age', 'Weight', 'Session_duration_(hours)']]  # Update the column names
-    y = data['Calories_Burned']  # Update the column name
-    model = LinearRegression()
-    model.fit(X, y)
-    return model
+# Step 2: Exploratory Data Analysis (EDA)
 
-# Sidebar for file upload
-st.sidebar.title("Data Upload")
-uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
+# Histograms for numeric columns
+df.hist(bins=10, figsize=(15, 10))
+plt.suptitle("Histograms of Numeric Columns")
+plt.show()
 
-# Tabs for App Sections
-tab1, tab2, tab3, tab4 = st.tabs(["Data Upload", "Input Features & Prediction", "Visualization", "Correlation Heatmap"])
+# Boxplots for numeric columns to check for outliers
+numeric_columns = ['Age', 'Weight (kg)', 'Height (m)', 'Max_BPM', 'Avg_BPM', 'Resting_BPM', 'Session_Duration (hours)', 'Calories_Burned', 'Fat_Percentage', 'Water_Intake (liters)', 'Workout_Frequency (days/week)', 'Experience_Level', 'BMI']
+for col in numeric_columns:
+    plt.figure(figsize=(8, 6))
+    sns.boxplot(x=df[col])
+    plt.title(f"Boxplot of {col}")
+    plt.show()
 
-# Tab 1: Data Upload
-with tab1:
-    st.header("Data Upload")
-    if uploaded_file:
-        gym_data = load_data(uploaded_file)
-        st.write("Data Sample:")
-        st.write(gym_data.head())
-    else:
-        st.write("Please upload a CSV file.")
+# Correlation matrix
+corr_matrix = df.corr()
+plt.figure(figsize=(12, 8))
+sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', linewidths=0.5)
+plt.title("Correlation Matrix")
+plt.show()
 
-# Tab 2: Input Features & Prediction
-with tab2:
-    st.header("Input Features & Prediction")
-    if uploaded_file:
-        # Ensure the column names match those in the dataset
-        age = st.number_input("Age", min_value=0, max_value=100, step=1)
-        weight = st.number_input("Weight (kg)", min_value=0.0, max_value=200.0, step=0.1)
-        session_duration = st.number_input("Session Duration (minutes)", min_value=0, max_value=300, step=1)
-        
-        # Prepare input data for prediction
-        user_data = pd.DataFrame({
-            'Age': [age],
-            'Weight': [weight],
-            'Session_duration_(hours)': [session_duration]
-        })
-        
-        # Train and make predictions
-        model = train_model(gym_data)
-        prediction = model.predict(user_data[['Age', 'Weight', 'Session_duration_(hours)']])
-        st.write(f"Predicted Calories Burned: {prediction[0]:.2f}")
-    else:
-        st.write("Please upload data in the 'Data Upload' tab.")
+# Step 3: Prepare Data for Machine Learning
+# Let's say we want to predict "Calories_Burned" based on other features.
+X = df[['Age', 'Weight (kg)', 'Height (m)', 'Max_BPM', 'Avg_BPM', 'Resting_BPM', 
+        'Session_Duration (hours)', 'Fat_Percentage', 'Water_Intake (liters)', 
+        'Workout_Frequency (days/week)', 'Experience_Level', 'BMI']]
+y = df['Calories_Burned']
 
-# Tab 3: Visualization
-with tab3:
-    st.header("Visualization")
-    if uploaded_file:
-        st.subheader("Data Distribution by Features")
-        selected_columns = st.multiselect("Select columns for distribution plot", gym_data.columns.tolist())
-        if selected_columns:
-            for col in selected_columns:
-                fig, ax = plt.subplots()
-                sns.histplot(gym_data[col], ax=ax)
-                st.pyplot(fig)
-    else:
-        st.write("Please upload data in the 'Data Upload' tab.")
+# Split into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Tab 4: Correlation Heatmap
-with tab4:
-    st.header("Correlation Heatmap")
-    if uploaded_file:
-        # Get a list of numeric columns
-        numeric_cols = gym_data.select_dtypes(include=['int64', 'float64']).columns.tolist()
-        
-        # Display a multiselect for choosing columns for the heatmap
-        selected_cols = st.multiselect("Select columns for heatmap", numeric_cols, default=numeric_cols[:5])
-        
-        if selected_cols:
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.heatmap(gym_data[selected_cols].corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
-            st.pyplot(fig)
-    else:
-        st.write("Please upload data in the 'Data Upload' tab.") 
+# Step 4: Build a Linear Regression Model
+model = LinearRegression()
+model.fit(X_train, y_train)
+
+# Predict on test set
+y_pred = model.predict(X_test)
+
+# Step 5: Evaluate Model
+mse = mean_squared_error(y_test, y_pred)
+print(f"Mean Squared Error: {mse}")
+
+# Coefficients of the model
+print(f"Model Coefficients:\n{model.coef_}")
+
+# Step 6: Visualize Predictions vs Actual Values
+plt.figure(figsize=(8, 6))
+plt.scatter(y_test, y_pred)
+plt.xlabel("Actual Calories Burned")
+plt.ylabel("Predicted Calories Burned")
+plt.title("Actual vs Predicted Calories Burned")
+plt.show()
