@@ -1,4 +1,4 @@
-import streamlit as st
+\import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -12,6 +12,7 @@ st.title("Analyzing Gym Member Exercise Data for Health & Fitness Insights")
 @st.cache_data
 def load_data(file):
     data = pd.read_csv(file)
+    print(data.columns)  # Print the column names
     return data.sample(frac=0.1, random_state=1)  # Use 10% of the data for optimization
 
 @st.cache_resource
