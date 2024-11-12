@@ -17,7 +17,7 @@ def load_data(file):
 @st.cache_resource
 def train_model(data):
     X = data[['age', 'weight', 'workout_type', 'session_duration']]
-    y = data['Calories_Burned']
+    y = data['calories_burned']  # Assuming the column name is 'calories_burned'
     model = LinearRegression()
     model.fit(X, y)
     return model
