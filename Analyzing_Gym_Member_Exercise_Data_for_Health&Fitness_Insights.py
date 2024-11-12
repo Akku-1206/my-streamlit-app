@@ -81,10 +81,11 @@ user_input = {
 }
 user_input_df = pd.DataFrame(user_input, index=[0])
 
-# Model Training
+# Align user_input_df with training data columns
 X_train, X_test, y_train, y_test = train_test_split(gym.drop('Calories_Burned', axis=1), gym['Calories_Burned'], test_size=0.2, random_state=42)
+user_input_df = user_input_df.reindex(columns=X_train.columns, fill_value=0)
 
-# Train models
+# Model Training
 models = {
     'Linear Regression': LinearRegression(),
     'Decision Tree': DecisionTreeRegressor(random_state=42),
