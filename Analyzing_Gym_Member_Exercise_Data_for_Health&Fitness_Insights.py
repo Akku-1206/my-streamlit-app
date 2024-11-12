@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.linear_model import LinearRegression
@@ -41,12 +43,21 @@ def preprocess_data(gym):
 # Streamlit User Interface
 st.title("Gym Members Exercise Tracking Analysis")
 st.sidebar.title("Navigation")
-tabs = st.sidebar.radio("Select a tab", ["Enter User Input", "Model Prediction", "Dataset Upload"])
+tabs = st.sidebar.radio("Select a tab", ["Dataset Upload", "Input Features", "Model Prediction", "EDA & Visualizations"])
 
 # Placeholder for the dataset
 gym = None
 
-if tabs == "Enter User Input":
+if tabs == "Dataset Upload":
+    st.subheader("Upload Your Own Dataset")
+    uploaded_file = st.file_uploader("Upload a CSV file for analysis", type=["csv"])
+
+    if uploaded_file is not None:
+        gym = pd.read_csv(uploaded_file)
+        gym = preprocess_data(gym)
+        st.write(gym.head())
+
+elif tabs == "Input Features":
     st.subheader("Enter Your Details for Prediction")
     age = st.slider('Age', 18, 100, 25)
     weight = st.number_input('Weight (kg)', min_value=30, max_value=200, value=70)
@@ -67,7 +78,7 @@ if tabs == "Enter User Input":
     st.write(f"Entered Details: {user_input}")
 
 elif tabs == "Model Prediction":
-    st.subheader("Model Performance Comparison")
+    st.subheader("Model Performance Comparison and Prediction")
 
     # Ensure that dataset is loaded
     if gym is None:
@@ -124,11 +135,28 @@ elif tabs == "Model Prediction":
             st.write(f"Session Duration: {session_duration} hours")
             st.write(f"Workout Type: {workout_type}")
 
-elif tabs == "Dataset Upload":
-    st.subheader("Upload Your Own Dataset")
-    uploaded_file = st.file_uploader("Upload a CSV file for analysis", type=["csv"])
+elif tabs == "EDA & Visualizations":
+    st.subheader("Exploratory Data Analysis and Visualizations")
 
-    if uploaded_file is not None:
-        gym = pd.read_csv(uploaded_file)
-        gym = preprocess_data(gym)
-        st.write(gym.head())
+    if gym is None:
+        st.error("Dataset is not loaded. Please upload a dataset first.")
+    else:
+        # Distribution plot for Calories_Burned
+        st.write("### Distribution of Calories Burned")
+        plt.figure(figsize=(10, 6))
+        sns.histplot(gym['Calories_Burned'], kde=True, color='skyblue')
+        st.pyplot()
+
+        # Correlation heatmap
+        st.write("### Correlation Heatmap")
+        plt.figure(figsize=(10, 6))
+        correlation = gym.corr()
+        sns.heatmap(correlation, annot=True, cmap='coolwarm', fmt=".2f", linewidths=0.5)
+        st.pyplot()
+
+        # Pairplot of selected features
+        st.write("### Pairplot of Selected Features")
+        selected_features = ['Weight (kg)', 'Age', 'Session_Duration (hours)', 'Calories_Burned']
+        sns.pairplot(gym[selected_features], hue="Workout_Type_Strength")
+        st.pyplot()
+
