@@ -18,6 +18,10 @@ if uploaded_file:
     st.write("Data Preview:")
     st.dataframe(gym_data.head())  # Show the first few rows of the dataset
 
+    # Print the column names to check for any discrepancies
+    st.write("Column Names in Dataset:")
+    st.write(gym_data.columns)
+
     # Display summary statistics
     st.write("Data Summary:")
     st.write(gym_data.describe())
@@ -52,7 +56,12 @@ if uploaded_file:
     st.subheader('Calories Burned Prediction')
 
     # Check if the dataset contains relevant columns (age, weight, workout type, etc.)
-    if 'Calories_Burned' in gym_data.columns:
+    # Print the column names here to check if they match
+    st.write(f"Columns in dataset: {gym_data.columns}")
+
+    required_columns = ['Age', 'Weight', 'Workout_Type', 'Session_Duration']
+    
+    if all(col in gym_data.columns for col in required_columns):
         # Prepare data for training the model
         X = gym_data[['Age', 'Weight', 'Workout_Type', 'Session_Duration']]
         y = gym_data['Calories_Burned']
@@ -79,6 +88,7 @@ if uploaded_file:
         # 5. **Explanation (optional)**
         st.write("Explanation: The model uses factors such as age, weight, workout type, and session duration to predict calories burned.")
     else:
-        st.write("The dataset does not contain 'Calories_Burned' column for predictions.")
+        st.write("The dataset does not contain the necessary columns for prediction.")
+        st.write(f"Missing columns: {set(required_columns) - set(gym_data.columns)}")
 
 # Run the Streamlit app
