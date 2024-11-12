@@ -12,14 +12,15 @@ st.title("Analyzing Gym Member Exercise Data for Health & Fitness Insights")
 @st.cache_data
 def load_data(file):
     data = pd.read_csv(file)
-    print(data.columns)  # Print the column names
+    print(data.columns)  # Print the column names for debugging
     return data.sample(frac=0.1, random_state=1)  # Use 10% of the data for optimization
 
 @st.cache_resource
 def train_model(data):
-    # Update the column names based on the actual column names in the dataset
-    X = data[['age', 'weight', 'session_duration']]  # Update the column names
-    y = data['calories_burned']  # Update the column name
+    # Ensure the column names are correct based on your dataset
+    # For example, if the dataset has 'Age', 'Weight', 'Session_duration_(hours)', 'Calories_Burned'
+    X = data[['Age', 'Weight', 'Session_duration_(hours)']]  # Update the column names
+    y = data['Calories_Burned']  # Update the column name
     model = LinearRegression()
     model.fit(X, y)
     return model
@@ -45,22 +46,21 @@ with tab1:
 with tab2:
     st.header("Input Features & Prediction")
     if uploaded_file:
-        # Get input features from the user
-        # Update the column names based on the actual column names in the dataset
+        # Ensure the column names match those in the dataset
         age = st.number_input("Age", min_value=0, max_value=100, step=1)
         weight = st.number_input("Weight (kg)", min_value=0.0, max_value=200.0, step=0.1)
         session_duration = st.number_input("Session Duration (minutes)", min_value=0, max_value=300, step=1)
         
         # Prepare input data for prediction
         user_data = pd.DataFrame({
-            'age': [age],
-            'weight': [weight],
-            'session_duration': [session_duration]
+            'Age': [age],
+            'Weight': [weight],
+            'Session_duration_(hours)': [session_duration]
         })
         
         # Train and make predictions
         model = train_model(gym_data)
-        prediction = model.predict(user_data[['age', 'weight', 'session_duration']])
+        prediction = model.predict(user_data[['Age', 'Weight', 'Session_duration_(hours)']])
         st.write(f"Predicted Calories Burned: {prediction[0]:.2f}")
     else:
         st.write("Please upload data in the 'Data Upload' tab.")
@@ -94,4 +94,4 @@ with tab4:
             sns.heatmap(gym_data[selected_cols].corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
             st.pyplot(fig)
     else:
-        st.write("Please upload data in the 'Data Upload' tab.")
+        st.write("Please upload data in the 'Data Upload' tab.") 
