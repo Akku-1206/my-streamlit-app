@@ -17,8 +17,9 @@ def load_data(file):
 
 @st.cache_resource
 def train_model(data):
-    X = data[['age', 'weight', 'session_duration']]
-    y = data['calories_burned']
+    # Update the column names based on the actual column names in the dataset
+    X = data[['age', 'weight', 'session_duration']]  # Update the column names
+    y = data['calories_burned']  # Update the column name
     model = LinearRegression()
     model.fit(X, y)
     return model
@@ -45,6 +46,7 @@ with tab2:
     st.header("Input Features & Prediction")
     if uploaded_file:
         # Get input features from the user
+        # Update the column names based on the actual column names in the dataset
         age = st.number_input("Age", min_value=0, max_value=100, step=1)
         weight = st.number_input("Weight (kg)", min_value=0.0, max_value=200.0, step=0.1)
         session_duration = st.number_input("Session Duration (minutes)", min_value=0, max_value=300, step=1)
