@@ -21,8 +21,11 @@ if 'gym_data' not in st.session_state:
 tabs = ['Dataset Upload', 'Input Features', 'Prediction', 'EDA & Visualizations']
 selected_tab = st.sidebar.radio("Navigation", tabs)
 
+# Option to choose between file upload or manual input
+input_choice = st.sidebar.selectbox("Choose how to provide the data", ["Upload CSV File", "Enter Data Manually"])
+
 # 1. Dataset Upload Tab
-if selected_tab == 'Dataset Upload':
+if selected_tab == 'Dataset Upload' and input_choice == 'Upload CSV File':
     st.header("Upload Your Own Dataset")
     st.markdown("Upload a CSV file for analysis")
     
@@ -38,7 +41,7 @@ if selected_tab == 'Dataset Upload':
         st.write("Please upload a dataset to proceed.")
 
 # 2. Input Features Tab
-elif selected_tab == 'Input Features':
+elif selected_tab == 'Input Features' and input_choice == 'Enter Data Manually':
     st.header('Enter Your Details for Prediction')
 
     # Input fields for user details
@@ -76,30 +79,38 @@ elif selected_tab == 'Prediction':
     if st.session_state.gym_data is not None:
         gym_data = st.session_state.gym_data
         
-        # Train a model if the data is available
-        X = gym_data.drop('Calories_Burned', axis=1)
-        y = gym_data['Calories_Burned']
+        # Ensure only numeric columns are selected for model training
+        gym_data_numeric = gym_data.select_dtypes(include=[np.number])
         
-        # Train-test split
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        model = LinearRegression()
-        model.fit(X_train, y_train)
-
-        # Predict on test set
-        y_pred = model.predict(X_test)
-
-        # Model Evaluation
-        mse = mean_squared_error(y_test, y_pred)
-        st.write(f"Mean Squared Error: {mse}")
-        
-        # User prediction
-        if st.session_state.user_input is not None:
-            user_input_df = pd.DataFrame([st.session_state.user_input])
-            user_pred = model.predict(user_input_df)
-            st.write(f"Predicted Calories Burned: {user_pred[0]} kcal")
+        if gym_data_numeric.shape[1] == 0:
+            st.write("No numeric columns found in the dataset. Please upload a valid dataset.")
         else:
-            st.write("Please enter details in the 'Input Features' tab to make predictions.")
+            X = gym_data_numeric.drop('Calories_Burned', axis=1, errors='ignore')  # Drop the target column
+            y = gym_data_numeric['Calories_Burned'] if 'Calories_Burned' in gym_data_numeric else None
+
+            if y is not None:
+                # Train-test split
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+                model = LinearRegression()
+                model.fit(X_train, y_train)
+
+                # Predict on test set
+                y_pred = model.predict(X_test)
+
+                # Model Evaluation
+                mse = mean_squared_error(y_test, y_pred)
+                st.write(f"Mean Squared Error: {mse}")
+                
+                # User prediction
+                if st.session_state.user_input is not None:
+                    user_input_df = pd.DataFrame([st.session_state.user_input])
+                    user_pred = model.predict(user_input_df)
+                    st.write(f"Predicted Calories Burned: {user_pred[0]} kcal")
+                else:
+                    st.write("Please enter details in the 'Input Features' tab to make predictions.")
+            else:
+                st.write("Target column 'Calories_Burned' is missing from the dataset.")
     else:
         st.write("Dataset is not loaded. Please upload a dataset first.")
 
@@ -111,22 +122,29 @@ elif selected_tab == 'EDA & Visualizations':
     if st.session_state.gym_data is not None:
         gym_data = st.session_state.gym_data
 
+        # Ensure only numeric columns are selected for correlation analysis
+        gym_data_numeric = gym_data.select_dtypes(include=[np.number])
+
         # Distribution of Calories Burned
         st.subheader("Distribution of Calories Burned")
         plt.figure(figsize=(8, 6))
         sns.histplot(gym_data['Calories_Burned'], kde=True)
         st.pyplot()
-        
+
         # Correlation Heatmap
-        st.subheader("Correlation Heatmap")
-        plt.figure(figsize=(10, 8))
-        sns.heatmap(gym_data.corr(), annot=True, cmap='coolwarm', fmt='.2f')
-        st.pyplot()
-        
+        if gym_data_numeric.shape[1] > 1:  # Ensure there are enough numeric columns
+            st.subheader("Correlation Heatmap")
+            plt.figure(figsize=(10, 8))
+            sns.heatmap(gym_data_numeric.corr(), annot=True, cmap='coolwarm', fmt='.2f')
+            st.pyplot()
+
         # Pairplot of Selected Features
         st.subheader("Pairplot of Selected Features")
         selected_features = ['Age', 'Weight (kg)', 'Session_Duration (hours)', 'Calories_Burned']
-        sns.pairplot(gym_data[selected_features], hue="Workout_Type_HIIT")
-        st.pyplot()
+        if all(feature in gym_data.columns for feature in selected_features):
+            sns.pairplot(gym_data[selected_features], hue="Workout_Type_HIIT")
+            st.pyplot()
+        else:
+            st.write("Selected features are missing in the dataset.")
     else:
         st.write("Dataset is not loaded. Please upload a dataset first.")
