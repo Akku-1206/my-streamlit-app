@@ -17,7 +17,7 @@ def load_data(file):
 @st.cache_resource
 def train_model(data):
     X = data[['age', 'weight', 'workout_type', 'session_duration']]
-    y = data['calories_burned']  # Assuming the column name is 'calories_burned'
+    y = data['calories_burned']
     model = LinearRegression()
     model.fit(X, y)
     return model
@@ -82,7 +82,12 @@ with tab3:
 with tab4:
     st.header("Correlation Heatmap")
     if uploaded_file:
-        selected_cols = st.multiselect("Select columns for heatmap", gym_data.columns.tolist(), default=gym_data.columns.tolist()[:5])
+        # Get a list of numeric columns
+        numeric_cols = gym_data.select_dtypes(include=['int64', 'float64']).columns.tolist()
+        
+        # Display a multiselect for choosing columns for the heatmap
+        selected_cols = st.multiselect("Select columns for heatmap", numeric_cols, default=numeric_cols[:5])
+        
         if selected_cols:
             fig, ax = plt.subplots(figsize=(10, 6))
             sns.heatmap(gym_data[selected_cols].corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
