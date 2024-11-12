@@ -43,6 +43,9 @@ st.title("Gym Members Exercise Tracking Analysis")
 st.sidebar.title("Navigation")
 tabs = st.sidebar.radio("Select a tab", ["Enter User Input", "Model Prediction", "Dataset Upload"])
 
+# Placeholder for the dataset
+gym = None
+
 if tabs == "Enter User Input":
     st.subheader("Enter Your Details for Prediction")
     age = st.slider('Age', 18, 100, 25)
@@ -66,15 +69,18 @@ if tabs == "Enter User Input":
 elif tabs == "Model Prediction":
     st.subheader("Model Performance Comparison")
 
-    # Model training and evaluation
-    if 'gym' not in locals():
+    # Ensure that dataset is loaded
+    if gym is None:
         st.error("Dataset is not loaded. Please upload a dataset first.")
     else:
+        # Preparing data for model prediction
         X = gym.drop('Calories_Burned', axis=1)
         y = gym['Calories_Burned']
 
+        # Split data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+        # Train models
         models = {
             'Linear Regression': LinearRegression(),
             'Decision Tree': DecisionTreeRegressor(random_state=42),
@@ -100,11 +106,11 @@ elif tabs == "Model Prediction":
         results_df = pd.DataFrame(results)
         st.write(results_df)
 
-        # Select model for prediction
+        # Model selection dropdown
         selected_model_name = st.selectbox("Select Model for Prediction", ["Linear Regression", "Decision Tree", "Random Forest"])
         selected_model = models[selected_model_name]
 
-        # Make prediction for user input
+        # Make prediction based on user input
         if user_input_df.empty:
             st.error("Please enter user input first.")
         else:
