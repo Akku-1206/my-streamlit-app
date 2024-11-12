@@ -1,91 +1,92 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import seaborn as sns
 import matplotlib.pyplot as plt
+import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 
-# Initialize Streamlit app
+# Streamlit App Title
 st.title("Analyzing Gym Member Exercise Data for Health & Fitness Insights")
 
-# Set up tabs for each section
-tab1, tab2, tab3, tab4 = st.tabs(["Data Upload", "Input Features & Prediction", "Visualization", "Correlation Heatmap"])
+# Cache functions for loading data and model to optimize memory usage
+@st.cache_data
+def load_data(file):
+    data = pd.read_csv(file)
+    return data.sample(frac=0.1, random_state=1)  # Use 10% of the data for optimization
 
-# Define global variables
-model = LinearRegression()
-gym_data = None  # Data variable accessible across tabs
+@st.cache_resource
+def train_model(data):
+    X = data[['age', 'weight', 'workout_type', 'session_duration']]
+    y = data['Calories_Burned']
+    model = LinearRegression()
+    model.fit(X, y)
+    return model
+
+# Sidebar for file upload
+st.sidebar.title("Data Upload")
+uploaded_file = st.sidebar.file_uploader("Upload CSV File", type=["csv"])
+
+# Tabs for App Sections
+tab1, tab2, tab3, tab4 = st.tabs(["Data Upload", "Input Features & Prediction", "Visualization", "Correlation Heatmap"])
 
 # Tab 1: Data Upload
 with tab1:
     st.header("Data Upload")
-    uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
-    if uploaded_file is not None:
-        gym_data = pd.read_csv(uploaded_file)
+    if uploaded_file:
+        gym_data = load_data(uploaded_file)
         st.write("Data Sample:")
         st.write(gym_data.head())
     else:
-        st.warning("Please upload a CSV file to proceed.")
-
-# Proceed with data preprocessing and model training if data is uploaded
-if uploaded_file is not None:
-    # Keep only numeric data and drop rows with missing values
-    gym_data = gym_data.select_dtypes(include=[np.number]).dropna()
-
-    # Ensure 'Calories_Burned' exists for prediction
-    if "Calories_Burned" in gym_data.columns:
-        X = gym_data.drop(columns=["Calories_Burned"])
-        y = gym_data["Calories_Burned"]
-
-        # Split data for training
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
-        model.fit(X_train, y_train)
+        st.write("Please upload a CSV file.")
 
 # Tab 2: Input Features & Prediction
 with tab2:
     st.header("Input Features & Prediction")
-    if uploaded_file is not None:
-        # Capture user inputs for each feature in X
-        user_data = {}
-        for col in X.columns:
-            user_data[col] = st.number_input(f"Enter value for {col}", min_value=0.0, step=0.1)
-        
-        # Convert input to DataFrame format
-        user_data_df = pd.DataFrame([user_data])
-        
-        if st.button("Predict Calories Burned"):
-            try:
-                # Ensure all inputs are numeric
-                user_data_df = user_data_df.astype(float)
-                prediction = model.predict(user_data_df)
-                st.success(f"Predicted Calories Burned: {prediction[0]:.2f}")
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+    if uploaded_file:
+        # Get input features from the user
+        age = st.number_input("Age", min_value=0, max_value=100, step=1)
+        weight = st.number_input("Weight (kg)", min_value=0.0, max_value=200.0, step=0.1)
+        workout_type = st.selectbox("Workout Type", gym_data['workout_type'].unique())
+        session_duration = st.number_input("Session Duration (minutes)", min_value=0, max_value=300, step=1)
+
+        # Prepare input data for prediction
+        user_data = pd.DataFrame({
+            'age': [age],
+            'weight': [weight],
+            'workout_type': [workout_type],
+            'session_duration': [session_duration]
+        })
+
+        # Train and make predictions
+        model = train_model(gym_data)
+        prediction = model.predict(user_data[['age', 'weight', 'session_duration']])
+        st.write(f"Predicted Calories Burned: {prediction[0]:.2f}")
     else:
-        st.warning("Please upload data in the 'Data Upload' tab.")
+        st.write("Please upload data in the 'Data Upload' tab.")
 
 # Tab 3: Visualization
 with tab3:
     st.header("Visualization")
-    if uploaded_file is not None:
+    if uploaded_file:
         st.subheader("Data Distribution by Features")
-        
-        # Create and display the pairplot as a static image
-        fig, ax = plt.subplots(figsize=(12, 8))
-        sns.pairplot(gym_data)
-        st.pyplot(fig)  # Display the figure in Streamlit
+        selected_columns = st.multiselect("Select columns for distribution plot", gym_data.columns.tolist())
+        if selected_columns:
+            for col in selected_columns:
+                fig, ax = plt.subplots()
+                sns.histplot(gym_data[col], ax=ax)
+                st.pyplot(fig)
     else:
-        st.warning("Please upload data in the 'Data Upload' tab.")
+        st.write("Please upload data in the 'Data Upload' tab.")
 
 # Tab 4: Correlation Heatmap
 with tab4:
     st.header("Correlation Heatmap")
-    if uploaded_file is not None:
-        st.subheader("Correlation Matrix")
-        
-        # Plot the heatmap
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.heatmap(gym_data.corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
-        st.pyplot(fig)  # Display the figure in Streamlit
+    if uploaded_file:
+        selected_cols = st.multiselect("Select columns for heatmap", gym_data.columns.tolist(), default=gym_data.columns.tolist()[:5])
+        if selected_cols:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.heatmap(gym_data[selected_cols].corr(), annot=True, cmap="coolwarm", fmt=".2f", ax=ax)
+            st.pyplot(fig)
     else:
-        st.warning("Please upload data in the 'Data Upload' tab.")
+        st.write("Please upload data in the 'Data Upload' tab.")
+
