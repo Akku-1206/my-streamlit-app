@@ -5,7 +5,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
 
 # Load sample data
 st.title("Analyzing Gym Member Exercise Data for Health & Fitness Insights")
@@ -15,6 +14,7 @@ tab1, tab2, tab3, tab4 = st.tabs(["Data Upload", "Input Features & Prediction", 
 
 # Define the model as a global variable so it can be used in multiple tabs
 model = LinearRegression()
+gym_data = None  # Define gym_data variable outside the if-block for wider access
 
 with tab1:
     st.header("Data Upload")
