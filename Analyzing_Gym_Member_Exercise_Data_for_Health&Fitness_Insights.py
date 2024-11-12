@@ -5,7 +5,14 @@ from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 
-# Assume 'gym' DataFrame is already loaded here
+# Assume 'gym' DataFrame is already loaded here with the necessary columns
+
+# Define target variable and features
+X = gym.drop('Calories_Burned', axis=1)
+y = gym['Calories_Burned']
+
+# Train/Test Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 # User Input for Prediction
 st.subheader("Enter Your Details for Prediction")
@@ -32,10 +39,7 @@ user_input_df = pd.DataFrame(user_input, index=[0])
 # Ensure user_input_df matches X_train columns
 user_input_df = user_input_df.reindex(columns=X_train.columns, fill_value=0)
 
-# Train/Test Split and Model Selection
-X_train, X_test, y_train, y_test = train_test_split(
-    gym.drop('Calories_Burned', axis=1), gym['Calories_Burned'], test_size=0.2, random_state=42)
-
+# Model Selection and Training
 selected_model_name = st.selectbox("Select Model for Prediction", ["Linear Regression", "Decision Tree", "Random Forest"])
 models = {
     'Linear Regression': LinearRegression(),
@@ -43,15 +47,19 @@ models = {
     'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42)
 }
 selected_model = models[selected_model_name]
-
-# Train model and make prediction
 selected_model.fit(X_train, y_train)
-user_prediction = selected_model.predict(user_input_df)[0]
-st.subheader(f"Predicted Calories Burned: {user_prediction:.2f} kcal")
 
-# Display user input for context
+# Make Prediction
+user_prediction = selected_model.predict(user_input_df)[0]
+
+# Display Prediction
+st.subheader("Model Predictions")
+st.write(f"Predicted Calories Burned: {user_prediction:.2f} kcal")
+
+# Display factors contributing to the prediction
 st.subheader("Factors Contributing to the Prediction")
-st.write(f"Age: {age}")
-st.write(f"Weight: {weight} kg")
-st.write(f"Session Duration: {session_duration} hours")
-st.write(f"Workout Type: {workout_type}")
+st.write(f"**Age:** {age}")
+st.write(f"**Weight:** {weight} kg")
+st.write(f"**Session Duration:** {session_duration} hours")
+st.write(f"**Workout Type:** {workout_type}")
+
