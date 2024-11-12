@@ -45,17 +45,25 @@ st.title("Gym Members Exercise Tracking Analysis")
 st.sidebar.title("Navigation")
 tabs = st.sidebar.radio("Select a tab", ["Dataset Upload", "Input Features", "Model Prediction", "EDA & Visualizations"])
 
-# Placeholder for the dataset
-gym = None
-
-if tabs == "Dataset Upload":
-    st.subheader("Upload Your Own Dataset")
+# Function to upload data and store it in session state
+def upload_data():
     uploaded_file = st.file_uploader("Upload a CSV file for analysis", type=["csv"])
 
     if uploaded_file is not None:
         gym = pd.read_csv(uploaded_file)
         gym = preprocess_data(gym)
+        st.session_state.gym = gym  # Store the dataset in session state
         st.write(gym.head())
+        return gym
+    return None
+
+# Placeholder for the dataset
+if 'gym' not in st.session_state:
+    st.session_state.gym = None
+
+if tabs == "Dataset Upload":
+    st.subheader("Upload Your Own Dataset")
+    gym = upload_data()
 
 elif tabs == "Input Features":
     st.subheader("Enter Your Details for Prediction")
@@ -81,10 +89,11 @@ elif tabs == "Model Prediction":
     st.subheader("Model Performance Comparison and Prediction")
 
     # Ensure that dataset is loaded
-    if gym is None:
+    if st.session_state.gym is None:
         st.error("Dataset is not loaded. Please upload a dataset first.")
     else:
         # Preparing data for model prediction
+        gym = st.session_state.gym
         X = gym.drop('Calories_Burned', axis=1)
         y = gym['Calories_Burned']
 
@@ -138,9 +147,10 @@ elif tabs == "Model Prediction":
 elif tabs == "EDA & Visualizations":
     st.subheader("Exploratory Data Analysis and Visualizations")
 
-    if gym is None:
+    if st.session_state.gym is None:
         st.error("Dataset is not loaded. Please upload a dataset first.")
     else:
+        gym = st.session_state.gym
         # Distribution plot for Calories_Burned
         st.write("### Distribution of Calories Burned")
         plt.figure(figsize=(10, 6))
