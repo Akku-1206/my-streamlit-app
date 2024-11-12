@@ -33,7 +33,7 @@ if uploaded_file:
     age = st.slider('Age', min_value=18, max_value=80, value=25)
     weight = st.number_input('Weight (kg)', min_value=40, max_value=150, value=70)
     workout_type = st.selectbox('Workout Type', options=['Cardio', 'Strength', 'Flexibility'])
-    session_duration = st.slider('Workout Duration (minutes)', min_value=15, max_value=180, value=45)
+    session_duration = st.slider('Workout Duration (hours)', min_value=0.25, max_value=3.0, value=1.0)  # in hours
 
     # 3. **Data Visualizations**
     st.subheader('Data Visualizations')
@@ -56,14 +56,11 @@ if uploaded_file:
     st.subheader('Calories Burned Prediction')
 
     # Check if the dataset contains relevant columns (age, weight, workout type, etc.)
-    # Print the column names here to check if they match
-    st.write(f"Columns in dataset: {gym_data.columns}")
-
-    required_columns = ['Age', 'Weight', 'Workout_Type', 'Session_Duration']
+    required_columns = ['Age', 'Weight (kg)', 'Workout_Type', 'Session_Duration (hours)', 'Calories_Burned']
     
     if all(col in gym_data.columns for col in required_columns):
         # Prepare data for training the model
-        X = gym_data[['Age', 'Weight', 'Workout_Type', 'Session_Duration']]
+        X = gym_data[['Age', 'Weight (kg)', 'Workout_Type', 'Session_Duration (hours)']]
         y = gym_data['Calories_Burned']
 
         # Encode categorical variables if necessary (like workout type)
@@ -75,7 +72,7 @@ if uploaded_file:
 
         # User input data for prediction
         user_data = pd.DataFrame([[age, weight, workout_type, session_duration]], 
-                                 columns=['Age', 'Weight', 'Workout_Type', 'Session_Duration'])
+                                 columns=['Age', 'Weight (kg)', 'Workout_Type', 'Session_Duration (hours)'])
 
         # Encode the user's input the same way
         user_data = pd.get_dummies(user_data, drop_first=True)
@@ -83,6 +80,7 @@ if uploaded_file:
         # Make prediction
         prediction = model.predict(user_data)
 
+        # Display the predicted calories burned in a human-readable format
         st.write(f"Predicted Calories Burned: {prediction[0]:.2f} kcal")
 
         # 5. **Explanation (optional)**
