@@ -18,7 +18,7 @@ if 'gym_data' not in st.session_state:
     st.session_state.gym_data = None
 
 # Tab selection for navigation
-tabs = ['Dataset Upload', 'Input Features', 'Model Prediction', 'EDA & Visualizations']
+tabs = ['Dataset Upload', 'Input Features', 'Prediction', 'EDA & Visualizations']
 selected_tab = st.sidebar.radio("Navigation", tabs)
 
 # 1. Dataset Upload Tab
@@ -68,8 +68,8 @@ elif selected_tab == 'Input Features':
     # Save input details for prediction
     st.session_state.user_input = entered_details
 
-# 3. Model Prediction Tab
-elif selected_tab == 'Model Prediction':
+# 3. Prediction Tab
+elif selected_tab == 'Prediction':
     st.header("Model Performance Comparison and Prediction")
     
     # Load the dataset if not already loaded
