@@ -38,17 +38,18 @@ if uploaded_file:
     # 2. **Data Visualizations**
     st.subheader('Data Visualizations')
 
-    # Histograms for numeric columns
-    st.write("Histogram for Numeric Columns:")
+    # Combined histogram for all numeric columns in one graph
+    st.write("Combined Histogram for Numeric Columns:")
     numeric_data = gym_data[numeric_cols]
     if not numeric_data.empty:
+        plt.figure(figsize=(10, 6))
         for column in numeric_data.columns:
-            plt.figure(figsize=(8, 6))
-            sns.histplot(numeric_data[column], kde=True, bins=20, color='skyblue', edgecolor='black')
-            plt.title(f'Histogram of {column}')
-            plt.xlabel(column)
-            plt.ylabel('Frequency')
-            st.pyplot()
+            sns.histplot(numeric_data[column], kde=True, label=column, bins=20, edgecolor='black', kde_kws={'color': 'red'})
+        plt.title('Combined Histogram of All Numeric Features')
+        plt.xlabel('Value')
+        plt.ylabel('Frequency')
+        plt.legend(title='Features')
+        st.pyplot()
     else:
         st.write("The dataset contains no numeric columns to plot histograms.")
 
@@ -70,10 +71,6 @@ if uploaded_file:
         # Train a simple Linear Regression model
         model = LinearRegression()
         model.fit(X_train, y_train)
-
-        # Predict on the test set for evaluation
-        y_pred = model.predict(X_test)
-        st.write("Model Mean Squared Error (on test data):", mean_squared_error(y_test, y_pred))
 
         # Example user input for prediction
         age = st.slider('Age', min_value=18, max_value=80, value=25)
