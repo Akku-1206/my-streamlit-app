@@ -16,7 +16,7 @@ def load_data(file):
 
 @st.cache_resource
 def train_model(data):
-    X = data[['age', 'weight', 'workout_type', 'session_duration']]
+    X = data[['age', 'weight', 'session_duration']]
     y = data['calories_burned']
     model = LinearRegression()
     model.fit(X, y)
@@ -46,14 +46,12 @@ with tab2:
         # Get input features from the user
         age = st.number_input("Age", min_value=0, max_value=100, step=1)
         weight = st.number_input("Weight (kg)", min_value=0.0, max_value=200.0, step=0.1)
-        workout_type = st.selectbox("Workout Type", gym_data['workout_type'].unique())
         session_duration = st.number_input("Session Duration (minutes)", min_value=0, max_value=300, step=1)
         
         # Prepare input data for prediction
         user_data = pd.DataFrame({
             'age': [age],
             'weight': [weight],
-            'workout_type': [workout_type],
             'session_duration': [session_duration]
         })
         
