@@ -5,7 +5,18 @@ from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 
-# Assume 'gym' DataFrame is already loaded here with the necessary columns
+# Load dataset
+st.title("Gym Member Exercise Data Analysis")
+st.write("Analyzing data and predicting calories burned based on user inputs")
+
+# Load data
+data_file = "gym_data.csv"  # Update this to the correct file path
+try:
+    gym = pd.read_csv(data_file)
+    st.write("Data loaded successfully.")
+except FileNotFoundError:
+    st.error(f"Data file '{data_file}' not found. Please check the file path and try again.")
+    st.stop()  # Stop the app if data can't be loaded
 
 # Define target variable and features
 X = gym.drop('Calories_Burned', axis=1)
@@ -62,4 +73,3 @@ st.write(f"**Age:** {age}")
 st.write(f"**Weight:** {weight} kg")
 st.write(f"**Session Duration:** {session_duration} hours")
 st.write(f"**Workout Type:** {workout_type}")
-
