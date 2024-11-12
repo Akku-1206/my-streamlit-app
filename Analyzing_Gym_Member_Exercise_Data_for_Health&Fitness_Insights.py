@@ -1,92 +1,106 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
-# Set up Streamlit page
-st.title('Gym Member Exercise Data Insights')
+# Title of the app
+st.title("Gym Members Exercise Tracking Analysis")
 
-# 1. **File Upload Section**
-st.subheader('Upload Your Data File')
-uploaded_file = st.file_uploader("Choose a CSV file", type=["csv"])
+# Sidebar for navigation
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Data Upload", "Input Features & Prediction", "Data Visualizations"])
 
-if uploaded_file:
-    # Read the uploaded file into a DataFrame
-    gym_data = pd.read_csv(uploaded_file)
-    
-    st.write("Data Preview:")
-    st.dataframe(gym_data.head())  # Show the first few rows of the dataset
+# Load and preprocess data
+if "data" not in st.session_state:
+    st.session_state["data"] = None
 
-    # Print the column names to check for any discrepancies
-    st.write("Column Names in Dataset:")
-    st.write(gym_data.columns)
+if page == "Data Upload":
+    st.subheader("Upload your Gym Member Data")
+    uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+    if uploaded_file is not None:
+        data = pd.read_csv(uploaded_file)
+        st.session_state["data"] = data
+        st.write("Data Preview:")
+        st.write(data.head())
 
-    # Display summary statistics
-    st.write("Data Summary:")
-    st.write(gym_data.describe())
+if page == "Input Features & Prediction":
+    st.subheader("Enter Your Details for Prediction")
 
-    # 2. **Input Features for Predictions**
-    st.subheader('Input Features for Prediction')
+    if st.session_state["data"] is not None:
+        data = st.session_state["data"]
 
-    # Example input fields for prediction
-    age = st.slider('Age', min_value=18, max_value=80, value=25)
-    weight = st.number_input('Weight (kg)', min_value=40, max_value=150, value=70)
-    workout_type = st.selectbox('Workout Type', options=['Cardio', 'Strength', 'Flexibility'])
-    session_duration = st.slider('Workout Duration (hours)', min_value=0.25, max_value=3.0, value=1.0)  # in hours
+        # Feature inputs
+        age = st.number_input("Age", min_value=18, max_value=100, value=25)
+        weight = st.number_input("Weight (kg)", min_value=18, max_value=200, value=70)
+        session_duration = st.number_input("Session Duration (hours)", min_value=0.5, max_value=3.0, step=0.1, value=1.0)
+        workout_type = st.selectbox("Workout Type", ["HIIT", "Strength", "Yoga"])
 
-    # 3. **Data Visualizations**
-    st.subheader('Data Visualizations')
-
-    # Correlation Heatmap
-    st.write("Correlation Heatmap:")
-    if uploaded_file:
-        # Filter only numeric columns before calculating correlation
-        numeric_data = gym_data.select_dtypes(include=['number'])
+        # One-hot encode workout type
+        workout_type_encoded = {
+            "Workout_Type_HIIT": int(workout_type == "HIIT"),
+            "Workout_Type_Strength": int(workout_type == "Strength"),
+            "Workout_Type_Yoga": int(workout_type == "Yoga")
+        }
         
-        if not numeric_data.empty:
-            corr_matrix = numeric_data.corr()
-            plt.figure(figsize=(10, 8))
-            sns.heatmap(corr_matrix, annot=True, cmap='coolwarm', fmt='.2f')
-            st.pyplot()
+        # Create DataFrame for the input
+        user_data = pd.DataFrame([{
+            "Age": age,
+            "Weight": weight,
+            "Session_Duration": session_duration,
+            **workout_type_encoded
+        }])
+
+        st.write("Entered Details:")
+        st.write(user_data)
+
+        # Prepare data for model
+        if 'Calories_Burned' in data.columns:
+            # Encode categorical features and split data
+            data = pd.get_dummies(data, columns=["Workout_Type"], drop_first=True)
+            X = data.drop("Calories_Burned", axis=1)
+            y = data["Calories_Burned"]
+
+            # Train-test split
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+            model = LinearRegression()
+            model.fit(X_train, y_train)
+
+            # Align user_data with model columns
+            user_data = user_data.reindex(columns=X.columns, fill_value=0)
+            
+            # Prediction
+            prediction = model.predict(user_data)
+            st.write(f"Predicted Calories Burned: {prediction[0]:.2f}")
+
+            # Option to show evaluation metrics
+            y_pred = model.predict(X_test)
+            st.write("Model Evaluation:")
+            st.write(f"Mean Absolute Error: {mean_absolute_error(y_test, y_pred):.2f}")
+            st.write(f"Mean Squared Error: {mean_squared_error(y_test, y_pred):.2f}")
+            st.write(f"R-squared Score: {r2_score(y_test, y_pred):.2f}")
         else:
-            st.write("The dataset contains no numeric columns to compute correlation.")
+            st.write("Calories_Burned column is missing in the uploaded data. Cannot perform prediction.")
 
-    # 4. **Model Predictions: Calories Burned**
-    st.subheader('Calories Burned Prediction')
+if page == "Data Visualizations":
+    st.subheader("Data Visualizations")
 
-    # Check if the dataset contains relevant columns (age, weight, workout type, etc.)
-    required_columns = ['Age', 'Weight (kg)', 'Workout_Type', 'Session_Duration (hours)', 'Calories_Burned']
-    
-    if all(col in gym_data.columns for col in required_columns):
-        # Prepare data for training the model
-        X = gym_data[['Age', 'Weight (kg)', 'Workout_Type', 'Session_Duration (hours)']]
-        y = gym_data['Calories_Burned']
+    if st.session_state["data"] is not None:
+        data = st.session_state["data"]
+        
+        st.write("Feature Distributions:")
+        numeric_cols = data.select_dtypes(include=np.number).columns
+        fig, ax = plt.subplots(figsize=(10, 5))
+        sns.histplot(data[numeric_cols], kde=True, ax=ax)
+        st.pyplot(fig)
 
-        # Encode categorical variables if necessary (like workout type)
-        X = pd.get_dummies(X, drop_first=True)
-
-        # Train a simple Linear Regression model
-        model = LinearRegression()
-        model.fit(X, y)
-
-        # User input data for prediction
-        user_data = pd.DataFrame([[age, weight, workout_type, session_duration]], 
-                                 columns=['Age', 'Weight (kg)', 'Workout_Type', 'Session_Duration (hours)'])
-
-        # Encode the user's input the same way
-        user_data = pd.get_dummies(user_data, drop_first=True)
-
-        # Make prediction
-        prediction = model.predict(user_data)
-
-        # Display the predicted calories burned in a human-readable format
-        st.write(f"Predicted Calories Burned: {prediction[0]:.2f} kcal")
-
-        # 5. **Explanation (optional)**
-        st.write("Explanation: The model uses factors such as age, weight, workout type, and session duration to predict calories burned.")
+        if 'Calories_Burned' in data.columns:
+            st.write("Correlation Heatmap:")
+            fig, ax = plt.subplots(figsize=(10, 5))
+            sns.heatmap(data.corr(), annot=True, cmap='coolwarm', fmt='.2f', ax=ax)
+            st.pyplot(fig)
     else:
-        st.write("The dataset does not contain the necessary columns for prediction.")
-        st.write(f"Missing columns: {set(required_columns) - set(gym_data.columns)}")
-
-# Run the Streamlit app
+        st.write("Please upload data first.")
