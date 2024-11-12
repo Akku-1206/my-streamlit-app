@@ -38,15 +38,6 @@ def preprocess_data(gym):
     
     return gym
 
-# Load and preprocess the initial dataset
-file_path = "gym_data.csv"  # Change to your file path
-try:
-    gym = pd.read_csv(file_path)
-    gym = preprocess_data(gym)
-except FileNotFoundError:
-    st.error(f"{file_path} not found. Please check the file path.")
-    st.stop()
-
 # Streamlit User Interface
 st.title("Gym Members Exercise Tracking Analysis")
 st.sidebar.title("Navigation")
@@ -74,58 +65,64 @@ if tabs == "Enter User Input":
 
 elif tabs == "Model Prediction":
     st.subheader("Model Performance Comparison")
-    
+
     # Model training and evaluation
-    X = gym.drop('Calories_Burned', axis=1)
-    y = gym['Calories_Burned']
-    
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    if 'gym' not in locals():
+        st.error("Dataset is not loaded. Please upload a dataset first.")
+    else:
+        X = gym.drop('Calories_Burned', axis=1)
+        y = gym['Calories_Burned']
 
-    models = {
-        'Linear Regression': LinearRegression(),
-        'Decision Tree': DecisionTreeRegressor(random_state=42),
-        'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42)
-    }
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    results = []
-    for name, model in models.items():
-        model.fit(X_train, y_train)
-        y_pred = model.predict(X_test)
-        mse = mean_squared_error(y_test, y_pred)
-        rmse = np.sqrt(mse)
-        mae = mean_absolute_error(y_test, y_pred)
-        r2 = r2_score(y_test, y_pred)
-        results.append({
-            'Model': name,
-            'MSE': mse,
-            'RMSE': rmse,
-            'MAE': mae,
-            'R2': r2
-        })
+        models = {
+            'Linear Regression': LinearRegression(),
+            'Decision Tree': DecisionTreeRegressor(random_state=42),
+            'Random Forest': RandomForestRegressor(n_estimators=100, random_state=42)
+        }
 
-    results_df = pd.DataFrame(results)
-    st.write(results_df)
+        results = []
+        for name, model in models.items():
+            model.fit(X_train, y_train)
+            y_pred = model.predict(X_test)
+            mse = mean_squared_error(y_test, y_pred)
+            rmse = np.sqrt(mse)
+            mae = mean_absolute_error(y_test, y_pred)
+            r2 = r2_score(y_test, y_pred)
+            results.append({
+                'Model': name,
+                'MSE': mse,
+                'RMSE': rmse,
+                'MAE': mae,
+                'R2': r2
+            })
 
-    # Select model for prediction
-    selected_model_name = st.selectbox("Select Model for Prediction", ["Linear Regression", "Decision Tree", "Random Forest"])
-    selected_model = models[selected_model_name]
+        results_df = pd.DataFrame(results)
+        st.write(results_df)
 
-    # Make prediction for user input
-    user_prediction = selected_model.predict(user_input_df)[0]
-    st.subheader(f"Predicted Calories Burned: {user_prediction:.2f} kcal")
+        # Select model for prediction
+        selected_model_name = st.selectbox("Select Model for Prediction", ["Linear Regression", "Decision Tree", "Random Forest"])
+        selected_model = models[selected_model_name]
 
-    # Explanation of factors contributing to the prediction
-    st.write("### Factors Contributing to the Prediction")
-    st.write(f"Age: {age}")
-    st.write(f"Weight: {weight} kg")
-    st.write(f"Session Duration: {session_duration} hours")
-    st.write(f"Workout Type: {workout_type}")
+        # Make prediction for user input
+        if user_input_df.empty:
+            st.error("Please enter user input first.")
+        else:
+            user_prediction = selected_model.predict(user_input_df)[0]
+            st.subheader(f"Predicted Calories Burned: {user_prediction:.2f} kcal")
+
+            # Explanation of factors contributing to the prediction
+            st.write("### Factors Contributing to the Prediction")
+            st.write(f"Age: {age}")
+            st.write(f"Weight: {weight} kg")
+            st.write(f"Session Duration: {session_duration} hours")
+            st.write(f"Workout Type: {workout_type}")
 
 elif tabs == "Dataset Upload":
     st.subheader("Upload Your Own Dataset")
     uploaded_file = st.file_uploader("Upload a CSV file for analysis", type=["csv"])
 
     if uploaded_file is not None:
-        uploaded_gym = pd.read_csv(uploaded_file)
-        uploaded_gym = preprocess_data(uploaded_gym)
-        st.write(uploaded_gym.head())
+        gym = pd.read_csv(uploaded_file)
+        gym = preprocess_data(gym)
+        st.write(gym.head())
