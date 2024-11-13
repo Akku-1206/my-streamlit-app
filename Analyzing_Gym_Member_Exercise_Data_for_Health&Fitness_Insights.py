@@ -70,8 +70,12 @@ if uploaded_file:
             session_duration = st.slider("Session Duration (hours)", 0.0, 5.0, 1.0)
 
             if st.button("Predict Calories Burned"):
+                # Create user input DataFrame with proper column names matching training features after preprocessing.
                 user_input = pd.DataFrame([[age, weight, session_duration, workout_type]], 
                                            columns=['Age', 'Weight (kg)', 'Session_Duration (hours)', 'Workout_Type'])
+                
+                # Add a dummy gender column since it is required by the model.
+                user_input['Gender'] = 'Male'  # Default value; adjust as needed based on your application context.
                 
                 # Apply preprocessing to user input before prediction.
                 user_input_processed = preprocessor.transform(user_input)  
