@@ -74,7 +74,7 @@ if uploaded_file:
                 st.error("The column 'Calories_Burned' is missing from the original dataset.")
             else:
                 # Define features and target for regression model (Calories Burned)
-                X_regression = processed_data_df.drop(columns=['Calories_Burned'])
+                X_regression = processed_data_df.drop(columns=['Calories_Burned'], errors='ignore')  # Using errors='ignore' to avoid KeyError if it doesn't exist.
                 y_regression = data['Calories_Burned']  # Ensure this column exists in your original data
 
                 # Split data into train and test sets for regression model
