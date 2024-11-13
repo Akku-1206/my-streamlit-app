@@ -8,8 +8,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error, r2_score
-import joblib
 import warnings
 
 # Suppress warnings for cleaner output
@@ -35,12 +33,6 @@ if uploaded_file:
     data = load_data(uploaded_file)
 
     if data is not None:
-        # Display basic info and the first few rows of the dataset
-        st.write("Dataset Information:")
-        st.write(data.info())
-        st.write("First few rows of the dataset:")
-        st.write(data.head())
-
         # Check if required columns exist in the dataset
         required_columns = ['Calories_Burned', 'Gender', 'Workout_Type', 'Age', 'Weight (kg)', 'Session_Duration (hours)', 'BMI']
         missing_columns = [col for col in required_columns if col not in data.columns]
@@ -71,14 +63,6 @@ if uploaded_file:
             regressor = RandomForestRegressor(random_state=42)
             regressor.fit(preprocessor.fit_transform(X_train), y_train)
 
-            # Make predictions and evaluate the model for regression
-            y_pred = regressor.predict(preprocessor.transform(X_test))
-            mae = mean_absolute_error(y_test, y_pred)
-            r2 = r2_score(y_test, y_pred)
-
-            st.write(f'Mean Absolute Error (Calories Burned): {mae}')
-            st.write(f'R-squared (Calories Burned): {r2}')
-
             # Input sliders for user predictions on Calories Burned
             age = st.slider("Age", 18, 80, 25)
             weight = st.number_input("Weight (kg)", 40.0, 150.0, 70.0)
@@ -86,8 +70,8 @@ if uploaded_file:
             session_duration = st.slider("Session Duration (hours)", 0.0, 5.0, 1.0)
 
             if st.button("Predict Calories Burned"):
-                user_input = pd.DataFrame([[age, weight, session_duration, 'Male' if workout_type == 'Male' else 'Female', workout_type]], 
-                                           columns=['Age', 'Weight (kg)', 'Session_Duration (hours)', 'Gender', 'Workout_Type'])
+                user_input = pd.DataFrame([[age, weight, session_duration, workout_type]], 
+                                           columns=['Age', 'Weight (kg)', 'Session_Duration (hours)', 'Workout_Type'])
                 
                 # Apply preprocessing to user input before prediction.
                 user_input_processed = preprocessor.transform(user_input)  
